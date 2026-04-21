@@ -1,55 +1,43 @@
 _G.AutoFarm = true
-_G.AutoStats = true
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local root = character:WaitForChild("HumanoidRootPart")
 
--- Hàm tìm thư mục chứa quái (Sửa lỗi "Enemies is not a valid member")
-local enemyFolder = game.Workspace:FindFirstChild("Enemies") or game.Workspace:FindFirstChild("NPCs") or game.Workspace:FindFirstChild("Monsters") or game.Workspace
-
--- Hàm cộng điểm (Bỏ qua nếu lỗi thư mục Events)
-spawn(function()
-    while _G.AutoStats do
-        pcall(function()
-            local remote = game:GetService("ReplicatedStorage"):FindFirstChild("StatsEvent", true)
-            if remote then
-                remote:FireServer("Melee", 1)
-            end
-        end)
-        wait(1)
+-- Hàm tìm Folder chứa quái một cách thông minh
+local function getEnemyFolder()
+    local names = {"Enemies", "NPCs", "Monsters", "Mob"}
+    for _, name in pairs(names) do
+        local folder = game.Workspace:FindFirstChild(name)
+        if folder then return folder end
     end
-end)
+    return nil
+end
 
--- Hàm tìm quái gần nhất
-local function getClosestMonster()
-    local target = nil
-    local dist = math.huge
-    for _, v in pairs(enemyFolder:GetChildren()) do
-        if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-            local magnitude = (v.HumanoidRootPart.Position - root.Position).magnitude
-            if magnitude < dist then
-                target = v
-                dist = magnitude
-            end
-        end
-    end
-    return target
+local enemyFolder = getEnemyFolder()
+
+-- Thông báo lỗi ra Console nếu vẫn không thấy quái
+if not enemyFolder then
+    warn("Không tìm thấy thư mục quái! Hãy kiểm tra lại tên thư mục trong Workspace.")
+else
+    print("Đã tìm thấy thư mục quái: " .. enemyFolder.Name)
 end
 
 spawn(function()
-    while _G.AutoFarm do
-        local monster = getClosestMonster()
-        if monster then
-            -- Bay lên đầu quái để né đòn
-            root.CFrame = monster.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-            
-            -- Đánh
-            game:GetService("VirtualUser"):CaptureController()
-            game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
+    while _G.AutoFarm and enemyFolder do
+        for _, v in pairs(enemyFolder:GetChildren()) do
+            if v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                repeat
+                    if not _G.AutoFarm then break end
+                    -- Bay lên đầu quái
+                    character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0)
+                    
+                    -- Click đánh
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
+                    wait()
+                until v.Humanoid.Health <= 0
+            end
         end
-        wait()
+        wait(1)
     end
 end)
-
-print("Script đã sửa lỗi! Đang tìm quái...")
