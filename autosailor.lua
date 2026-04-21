@@ -3,33 +3,32 @@ _G.AutoFarm = true
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
--- Tìm thư mục quái
-local enemyFolder = game.Workspace:FindFirstChild("NPCs") or game.Workspace:FindFirstChild("Enemies")
-
 spawn(function()
     while _G.AutoFarm do
-        if enemyFolder then
-            for _, v in pairs(enemyFolder:GetChildren()) do
-                -- Kiểm tra quái có đủ bộ phận và còn sống không
-                if v:IsA("Model") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v:FindFirstChild("HumanoidRootPart") then
-                    repeat
-                        if not _G.AutoFarm then break end
-                        
-                        -- Bay lên đầu quái (Dùng pcall để né mọi lỗi vặt)
+        local folder = workspace:FindFirstChild("NPCs") or workspace:FindFirstChild("Enemies")
+        if folder then
+            for _, monster in pairs(folder:GetChildren()) do
+                if not _G.AutoFarm then break end
+                
+                -- Kiểm tra quái có sống và có bộ phận để bay tới không
+                local humanoid = monster:FindFirstChildOfClass("Humanoid")
+                local root = monster:FindFirstChild("HumanoidRootPart")
+                
+                if humanoid and root and humanoid.Health > 0 then
+                    -- Đánh con quái này cho đến khi nó chết hẳn
+                    while _G.AutoFarm and humanoid.Health > 0 and monster.Parent do
                         pcall(function()
-                            character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                            character.HumanoidRootPart.CFrame = root.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
                         end)
-                        
-                        -- Click đánh
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
-                        wait()
-                    until not v:Parent or v.Humanoid.Health <= 0
+                        task.wait()
+                    end
                 end
             end
         end
-        wait(1)
+        task.wait(1)
     end
 end)
 
-print("Script v3 đã chạy! Đang bắt đầu farm...")
+print("--- SAILOR PIECE AUTO V4: ĐÃ KÍCH HOẠT ---")
